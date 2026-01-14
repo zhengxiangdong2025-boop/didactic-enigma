@@ -19,6 +19,8 @@ jobs:
       uses: actions/checkout@v4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+        # 添加这行，获取完整历史
+        fetch-depth: 0
         
     - name: Setup Python
       uses: actions/setup-python@v4
@@ -27,7 +29,7 @@ jobs:
         
     - name: Generate dancing pet
       run: |
-        # 生成宠物的代码保持不变...
+        # 你的宠物生成代码...
         PETS=("🐶" "🐱" "🐰" "🐹" "🐻" "🐼" "🦊" "🐯" "🦁" "🐮")
         DANCES=("💃" "🕺" "👯" "💫" "✨" "🌟" "🎉" "🎊" "🎶" "🎵")
         STYLES=("disco" "ballet" "breakdance" "salsa" "robot" "chicken" "floss" "gangnam")
@@ -57,9 +59,24 @@ jobs:
         EOF
         
         # 更新README的逻辑...
+        if [ ! -f README.md ]; then
+          echo "# Dancing Pet Repository" > README.md
+        fi
+        
+    - name: Sync with remote
+      run: |
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git fetch origin
+        git reset --hard origin/main
         
     - name: Commit and Push
       uses: stefanzweifel/git-auto-commit-action@v4
       with:
         commit_message: "🎉 Daily update: Pet dancing!"
         commit_options: '--no-verify'
+        # 强制推送解决冲突
+        push_options: '--force'
+        file_pattern: |
+          README.md
+          pet_dance.txt

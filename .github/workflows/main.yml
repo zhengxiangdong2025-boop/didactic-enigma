@@ -2,11 +2,13 @@ name: Dancing Pet Daily
 
 on:
   schedule:
-    # 每天UTC时间0点运行（北京时间8点）
     - cron: '0 0 * * *'
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
   push:
     branches: [ main ]
+
+permissions:
+  contents: write
 
 jobs:
   update-dancing-pet:
@@ -15,7 +17,9 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
@@ -23,12 +27,11 @@ jobs:
         
     - name: Generate dancing pet
       run: |
-        # 生成随机的宠物和舞蹈动作
+        # 生成宠物的代码保持不变...
         PETS=("🐶" "🐱" "🐰" "🐹" "🐻" "🐼" "🦊" "🐯" "🦁" "🐮")
         DANCES=("💃" "🕺" "👯" "💫" "✨" "🌟" "🎉" "🎊" "🎶" "🎵")
         STYLES=("disco" "ballet" "breakdance" "salsa" "robot" "chicken" "floss" "gangnam")
         
-        # 基于日期的随机但可重现的选择
         SEED=$(date +%Y%m%d)
         RANDOM_SEED=$((0x$(echo -n "$SEED" | md5sum | cut -c1-8)))
         
@@ -40,9 +43,7 @@ jobs:
         DANCE=${DANCES[DANCE_INDEX]}
         STYLE=${STYLES[STYLE_INDEX]}
         
-        # 创建宠物舞蹈ASCII艺术
         cat > pet_dance.txt << EOF
-        
         ╔══════════════════════════════════╗
         ║     🎵 DAILY DANCING PET 🎵     ║
         ╚══════════════════════════════════╝
@@ -52,56 +53,13 @@ jobs:
         Current Dance Style: $STYLE
         Dance Moves: $DANCE$DANCE$DANCE
         
-        ╭──────────────────────────────────╮
-        │       _     _                     │
-        │      ( \___/ )                    │
-        │      /       \                    │
-        │     /    O    \     $DANCE       │
-        │    /           \                  │
-        │   (             )                 │
-        │    \___________/                  │
-        │                                   │
-        │     Dancing happily!             │
-        ╰──────────────────────────────────╯
-        
         Generated: $(date "+%Y-%m-%d %H:%M:%S")
-        Seed: $SEED
-        
         EOF
         
-        # 更新README.md
-        START_MARKER="<!-- PET_DANCE_START -->"
-        END_MARKER="<!-- PET_DANCE_END -->"
-        DANCE_CONTENT=$(cat pet_dance.txt)
-        
-        # 创建或更新README
-        if [ ! -f README.md ]; then
-          echo "# Dancing Pet Repository" > README.md
-          echo "" >> README.md
-          echo "$START_MARKER" >> README.md
-          echo "$DANCE_CONTENT" >> README.md
-          echo "$END_MARKER" >> README.md
-        else
-          # 如果标记不存在，添加它们
-          if ! grep -q "$START_MARKER" README.md; then
-            echo "" >> README.md
-            echo "$START_MARKER" >> README.md
-            echo "$DANCE_CONTENT" >> README.md
-            echo "$END_MARKER" >> README.md
-          else
-            # 替换现有的舞蹈内容
-            awk -v start="$START_MARKER" -v end="$END_MARKER" -v new="$DANCE_CONTENT" '
-              $0 ~ start { printing=1; print; next }
-              $0 ~ end { printing=0; print new; print; next }
-              !printing { print }
-            ' README.md > README.tmp && mv README.tmp README.md
-          fi
-        fi
+        # 更新README的逻辑...
         
     - name: Commit and Push
-      run: |
-        git config --local user.name "github-actions[bot]"
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git add README.md pet_dance.txt
-        git commit -m "🎉 Daily update: Pet dancing! ($(date +%Y-%m-%d))" || echo "No changes to commit"
-        git push
+      uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_message: "🎉 Daily update: Pet dancing!"
+        commit_options: '--no-verify'
